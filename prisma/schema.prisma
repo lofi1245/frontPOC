@@ -1,0 +1,229 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "postgres"
+    // NOTE: When using mysql or sqlserver, uncomment the @db.Text annotations in model Account below
+    // Further reading:
+    // https://next-auth.js.org/adapters/prisma#create-the-prisma-schema
+    // https://www.prisma.io/docs/reference/api-reference/prisma-schema-reference#string
+    url      = env("DATABASE_URL")
+}
+
+model Example {
+    id        String   @id @default(cuid())
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+}
+
+// Necessary for Next auth
+model Account {
+    id                String  @id @default(cuid())
+    userId            String
+    type              String
+    provider          String
+    providerAccountId String
+    refresh_token     String? // @db.Text
+    access_token      String? // @db.Text
+    expires_at        Int?
+    token_type        String?
+    scope             String?
+    id_token          String? // @db.Text
+    session_state     String?
+    user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@unique([provider, providerAccountId])
+}
+
+model Session {
+    id           String   @id @default(cuid())
+    sessionToken String   @unique
+    userId       String
+    expires      DateTime
+    user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+    id            String    @id @default(cuid())
+    name          String?
+    email         String?   @unique
+    emailVerified DateTime?
+    image         String?
+    accounts      Account[]
+    sessions      Session[]
+}
+
+model VerificationToken {
+    identifier String
+    token      String   @unique
+    expires    DateTime
+
+    @@unique([identifier, token])
+}
+
+
+// Modelos do banco de dados PostgresSQL
+model usuario {
+    login               String  @id
+    senha               String
+    nome_completo       String
+    administradores     administrador[]
+    nutricionistas      nutricionista[]
+    pesquisadores       pesquisador[]
+    paciente            paciente[]
+}
+
+model administrador {
+    login               String      @id
+    fk_usuario          usuario     @relation(fields: [login], references: [login], onUpdate: Cascade, onDelete: Restrict)
+}
+
+model nutricionista {
+    login               String      @id
+    CRN                 String
+    atendimento         atendimento[]
+    fk_usuario          usuario     @relation(fields: [login], references: [login], onUpdate: Cascade, onDelete: Restrict)
+}
+
+model pesquisador {
+    login               String      @id
+    matricula           String
+    CRN                 String
+    desenvolve          desenvolve[]
+    atendimento         atendimento[]
+    fk_usuario          usuario     @relation(fields: [login], references: [login], onUpdate: Cascade, onDelete: Restrict)
+}
+
+model paciente {
+    login               String      @id
+    CPF                 String
+    sexo                String
+    data_nascimento     DateTime
+    participa           participa[]
+    dieta               dieta[]
+    atendimento         atendimento[]
+    fk_usuario          usuario     @relation(fields: [login], references: [login], onUpdate: Cascade, onDelete: Restrict)
+}
+
+model projeto {
+    nome_projeto        String      @id
+    descricao           String
+    desenvolve          desenvolve[]
+    participa           participa[]
+}
+
+model desenvolve {
+    pesquisador         String      
+    nome_projeto        String      
+    fk_pesquisador      pesquisador @relation(fields: [pesquisador], references: [login], onUpdate: Cascade, onDelete: Restrict)
+    fk_projeto          projeto     @relation(fields: [nome_projeto], references: [nome_projeto], onUpdate: Cascade, onDelete: Restrict)
+    @@id([pesquisador, nome_projeto])
+}
+
+model participa {
+    paciente            String      
+    nome_projeto        String      
+    fk_paciente         paciente    @relation(fields: [paciente], references: [login], onUpdate: Cascade, onDelete: Restrict)
+    fk_projeto          projeto     @relation(fields: [nome_projeto], references: [nome_projeto], onUpdate: Cascade, onDelete: Restrict)
+    @@id([paciente, nome_projeto])
+}
+
+model atendimento {
+    id_atendimento      Int         @id @default(autoincrement())
+    nutricionista       String
+    paciente            String
+    pesquisador         String
+    data_atd            DateTime
+    peso                Float
+    altura              Float
+    recordatorio        recordatorio[]
+    fk_nutricionista    nutricionista   @relation(fields: [nutricionista], references: [login], onUpdate: Cascade, onDelete: Restrict)
+    fk_paciente         paciente        @relation(fields: [paciente], references: [login], onUpdate: Cascade, onDelete: Restrict)
+    fk_pesquisador      pesquisador     @relation(fields: [pesquisador], references: [login], onUpdate: Cascade, onDelete: Restrict)
+}
+
+model dieta {
+    paciente            String      @id
+    duracao             String
+    objetivos           String
+    comp_dieta          compoe_dieta[]
+    fk_paciente         paciente    @relation(fields: [paciente], references: [login], onUpdate: Cascade, onDelete: Restrict)
+}
+
+model alimento {
+    codigo_base         String
+    base_de_dados       String
+    tags                String[]
+    proteina            Float
+    lipideos            Float
+    fibras              Float
+    vitamina_a_re       Float
+    vitamina_c          Float
+    vitamina_b1         Float
+    vitamina_b3         Float
+    vitamina_b6         Float
+    fosforo             Float
+    ferro               Float
+    sodio               Float
+    potassio            Float
+    calcio              Float
+    magnesio            Float
+    manganes            Float
+    cobre               Float
+    zinco               Float
+    dioxido_de_carbono  Float
+    comp_receita        compoe_receita[]
+    comp_dieta          compoe_dieta[]
+    recordatorio        recordatorio[]
+    equivalencia        equivalencia[]
+    @@id([codigo_base, base_de_dados])
+}
+
+model equivalencia {
+    alimento_codigo     String
+    base_de_dados       String
+    equivalente         String
+    fk_alimento         alimento        @relation(fields: [alimento_codigo, base_de_dados], references: [codigo_base, base_de_dados], onUpdate: Cascade, onDelete: Restrict)
+    @@id([alimento_codigo, base_de_dados, equivalente])
+}
+
+model recordatorio {
+    atendimento         Int
+    alimento_codigo     String
+    base_de_dados       String
+    fk_atendimento      atendimento     @relation(fields: [atendimento], references: [id_atendimento], onUpdate: Cascade, onDelete: Restrict)
+    fk_alimento         alimento        @relation(fields: [alimento_codigo, base_de_dados], references: [codigo_base, base_de_dados], onUpdate: Cascade, onDelete: Restrict)
+    @@id([atendimento, alimento_codigo, base_de_dados])
+}
+
+model receita {
+    nome_receita        String          @id
+    comp_receita        compoe_receita[]
+    comp_dieta          compoe_dieta[]
+}
+
+model compoe_receita {
+    nome_receita        String
+    alimento_codigo     String
+    base_de_dados       String
+    quantidade          Int
+    fk_receita          receita         @relation(fields: [nome_receita], references: [nome_receita], onUpdate: Cascade, onDelete: Restrict)
+    fk_alimento         alimento        @relation(fields: [alimento_codigo, base_de_dados], references: [codigo_base, base_de_dados], onUpdate: Cascade, onDelete: Restrict)
+    @@id([nome_receita, alimento_codigo, base_de_dados])
+}
+
+model compoe_dieta {
+    dieta               String
+    alimento_codigo     String
+    base_de_dados       String
+    nome_receita        String
+    quantidade          Int
+    fk_receita          receita         @relation(fields: [nome_receita], references: [nome_receita], onUpdate: Cascade, onDelete: Restrict)
+    fk_alimento         alimento        @relation(fields: [alimento_codigo, base_de_dados], references: [codigo_base, base_de_dados], onUpdate: Cascade, onDelete: Restrict)
+    fk_dieta            dieta           @relation(fields: [dieta], references: [paciente], onUpdate: Cascade, onDelete: Restrict)
+    @@unique([nome_receita, alimento_codigo, base_de_dados, dieta])
+}
